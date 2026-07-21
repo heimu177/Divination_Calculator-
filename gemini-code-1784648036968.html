@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QMDJ &amp; Liu Ren Calculator with AI Share</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/lunar-javascript@1.6.12/lunar.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        bg: '#0f1117',
+        surface: '#1a1d2e',
+        surfaceAlt: '#232740',
+        border: '#2e3350',
+        accent: '#7c5cfc',
+        accentLight: '#a78bfa',
+        gold: '#f0c040',
+        gateGood: '#34d399',
+        gateBad: '#f87171',
+        gateNeut: '#60a5fa',
+        destiny: '#f59e0b',
+      }
+    }
+  }
+}
+</script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap');
+* { box-sizing: border-box; }
+body {
+  font-family: 'Inter', 'Noto Sans SC', sans-serif;
+  background: #0f1117;
+  color: #e2e8f0;
+  min-height: 100vh;
+}
+.bg-grid {
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124,92,252,0.15), transparent),
+    radial-gradient(circle at 20% 80%, rgba(52,211,153,0.06), transparent);
+}
+.palace-cell {
+  background: rgba(26,29,46,0.85);
+  border: 1px solid #2e3350;
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+}
+.palace-cell:hover {
+  border-color: #7c5cfc;
+  box-shadow: 0 0 20px rgba(124,92,252,0.15);
+}
+.palace-destiny {
+  border-color: #f59e0b !important;
+  box-shadow: 0 0 16px rgba(245,158,11,0.25), inset 0 0 12px rgba(245,158,11,0.06) !important;
+  position: relative;
+}
+.gate-auspicious { color: #34d399; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.25); }
+.gate-inauspicious { color: #f87171; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); }
+.gate-neutral { color: #60a5fa; background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.25); }
+.toggle-active { background: linear-gradient(135deg, #7c5cfc, #a78bfa); }
+.toggle-inactive { background: #2e3350; }
+.fade-in { animation: fadeIn 0.4s ease-out; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+.toast {
+  animation: toastIn 0.35s ease-out, toastOut 0.35s ease-in 2.2s forwards;
+}
+@keyframes toastIn { from { opacity:0; transform:translateY(20px) scale(0.95); } to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes toastOut { from { opacity:1; } to { opacity:0; transform:translateY(-10px); } }
+.stem-wood { color: #4ade80; }
+.stem-fire { color: #f87171; }
+.stem-earth { color: #fbbf24; }
+.stem-metal { color: #e2e8f0; }
+.stem-water { color: #38bdf8; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #1a1d2e; }
+::-webkit-scrollbar-thumb { background: #2e3350; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #7c5cfc; }
+select, input[type="text"], input[type="datetime-local"], input[type="number"] {
+  background: #232740;
+  border: 1px solid #2e3350;
+  color: #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+select:focus, input:focus {
+  border-color: #7c5cfc;
+  box-shadow: 0 0 0 2px rgba(124,92,252,0.2);
+}
+.section-collapse { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+.section-collapse.open { max-height: 600px; }
+.destiny-badge {
+  position: absolute; top: -6px; right: -6px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #000; font-size: 8px; font-weight: 700;
+  padding: 1px 5px; border-radius: 4px; z-index: 2;
+  box-shadow: 0 2px 6px rgba(245,158,11,0.4);
+  letter-spacing: 0.02em;
+}
+.direction-card {
+  background: rgba(26,29,46,0.85);
+  border: 1px solid #2e3350;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  transition: all 0.3s ease;
+}
+.direction-card:hover {
+  border-color: #7c5cfc;
+  box-shadow: 0 0 16px rgba(124,92,252,0.12);
+}
+</style>
+</head>
+<body class="bg-grid">
+
+<!-- Toast Container -->
+<div id="toastContainer" class="fixed top-6 right-6 z-50 flex flex-col gap-3"></div>
+
+<!-- Header -->
+<header class="border-b border-border/50 backdrop-blur-md bg-bg/70 sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-accent to-accentLight flex items-center justify-center">
+        <i data-lucide="compass" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight">QMDJ & Liu Ren</h1>
+        <p class="text-xs text-slate-400">Divination Calculator with AI Share</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 text-xs text-slate-500">
+      <i data-lucide="info" class="w-3.5 h-3.5"></i>
+      <span>Simplified calculation for reference</span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-4 py-6">
+
+  <!-- ═══════════════ INPUT PANEL ═══════════════ -->
+  <section class="mb-6 fade-in">
+    <div class="bg-surface rounded-xl border border-border p-5">
+      <div class="flex items-center gap-2 mb-4">
+        <i data-lucide="settings-2" class="w-4 h-4 text-accent"></i>
+        <h2 class="font-semibold text-sm">Configuration</h2>
+      </div>
+
+      <!-- Row 1: Date, Method, Category, Question -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Date/Time + NOW button -->
+        <div>
+          <label class="block text-xs text-slate-400 mb-1.5">Date & Time</label>
+          <div class="flex gap-2">
+            <input type="datetime-local" id="inputDatetime" class="flex-1 text-sm min-w-0" />
+            <button onclick="setNow()" title="Reset to current time"
+              class="px-3 rounded-lg bg-accent/20 text-accentLight text-xs font-medium hover:bg-accent/30 transition-colors flex items-center gap-1 shrink-0 border border-accent/30">
+              <i data-lucide="clock" class="w-3.5 h-3.5"></i> Now
+            </button>
+          </div>
+        </div>
+        <!-- Method Toggle -->
+        <div>
+          <label class="block text-xs text-slate-400 mb-1.5">Divination Method</label>
+          <div class="flex rounded-lg overflow-hidden border border-border h-[38px]">
+            <button id="btnQMDJ" onclick="setMethod('qmdj')"
+              class="flex-1 text-xs font-medium transition-all duration-300 flex items-center justify-center gap-1.5 toggle-active text-white">
+              <i data-lucide="grid-3x3" class="w-3.5 h-3.5"></i> QMDJ
+            </button>
+            <button id="btnLR" onclick="setMethod('liuren')"
+              class="flex-1 text-xs font-medium transition-all duration-300 flex items-center justify-center gap-1.5 toggle-inactive text-slate-400">
+              <i data-lucide="layers" class="w-3.5 h-3.5"></i> Liu Ren
+            </button>
+          </div>
+          <!-- Dual Mode Toggle -->
+          <label class="flex items-center gap-2 mt-2 cursor-pointer select-none">
+            <input type="checkbox" id="dualMode" class="accent-accent w-3.5 h-3.5 rounded" />
+            <span class="text-[11px] text-slate-400">Include Liu Ren in QMDJ View (Dual Mode)</span>
+          </label>
+        </div>
+        <!-- Category -->
+        <div>
+          <label class="block text-xs text-slate-400 mb-1.5">Question Category</label>
+          <select id="inputCategory" class="w-full text-sm">
+            <option value="General">General</option>
+            <option value="Career">Career</option>
+            <option value="Wealth">Wealth</option>
+            <option value="Relationship">Relationship</option>
+            <option value="Health">Health</option>
+          </select>
+        </div>
+        <!-- Question -->
+        <div>
+          <label class="block text-xs text-slate-400 mb-1.5">Your Question (optional)</label>
+          <input type="text" id="inputQuestion" placeholder="e.g. Should I change jobs?" class="w-full text-sm" />
+        </div>
+      </div>
+
+      <!-- Location & True Solar Time -->
+      <div class="mt-4 pt-4 border-t border-border/40">
+        <button onclick="toggleSection('locationSection')" class="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200 transition-colors">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-accent"></i>
+          <span class="font-medium">Location & True Solar Time (真太阳时)</span>
+          <i data-lucide="chevron-down" class="w-3 h-3 transition-transform" id="locationChevron"></i>
+        </button>
+        <div id="locationSection" class="section-collapse mt-3">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1.5">Country / Region</label>
+              <select id="inputLocation" class="w-full text-sm" onchange="onLocationChange()">
+                <option value="8" data-lng="103.8">Singapore (UTC+8)</option>
+                <option value="8" data-lng="116.4">China (UTC+8)</option>
+                <option value="9" data-lng="139.7">Japan / Korea (UTC+9)</option>
+                <option value="5.5" data-lng="77.2">India (UTC+5:30)</option>
+                <option value="0" data-lng="-0.1">UK (UTC+0)</option>
+                <option value="1" data-lng="2.3">France / Germany (UTC+1)</option>
+                <option value="-5" data-lng="-74.0">US Eastern (UTC-5)</option>
+                <option value="-6" data-lng="-87.6">US Central (UTC-6)</option>
+                <option value="-7" data-lng="-104.9">US Mountain (UTC-7)</option>
+                <option value="-8" data-lng="-122.4">US Pacific (UTC-8)</option>
+                <option value="-3" data-lng="-43.2">Brazil (UTC-3)</option>
+                <option value="10" data-lng="151.2">Australia East (UTC+10)</option>
+                <option value="custom">Custom...</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1.5">UTC Offset (hours)</label>
+              <input type="number" id="inputUTCOffset" value="8" step="0.5" min="-12" max="14" class="w-full text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1.5">Longitude (for solar time)</label>
+              <input type="number" id="inputLongitude" value="103.8" step="0.1" min="-180" max="180" class="w-full text-sm" placeholder="e.g. 103.8 for Singapore" />
+            </div>
+          </div>
+          <div class="mt-2 flex items-center gap-3 text-xs text-slate-500">
+            <i data-lucide="info" class="w-3 h-3 shrink-0"></i>
+            <span>True Solar Time adjusts the hour pillar by your longitude vs. standard meridian. E.g. Singapore (103.8°E) uses UTC+8 (120°E), so true solar time is ~1 hour earlier than civil time.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Personal Info (Birth BaZi) -->
+      <div class="mt-4 pt-4 border-t border-border/40">
+        <button onclick="toggleSection('birthSection')" class="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-200 transition-colors">
+          <i data-lucide="user" class="w-3.5 h-3.5 text-destiny"></i>
+          <span class="font-medium">Personal Info — Birth BaZi Alignment</span>
+          <i data-lucide="chevron-down" class="w-3 h-3 transition-transform" id="birthChevron"></i>
+        </button>
+        <div id="birthSection" class="section-collapse mt-3">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1.5">Birth Date & Time</label>
+              <input type="datetime-local" id="inputBirthDatetime" class="w-full text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1.5">Gender</label>
+              <select id="inputGender" class="w-full text-sm">
+                <option value="">Not specified</option>
+                <option value="male">Male (阳)</option>
+                <option value="female">Female (阴)</option>
+              </select>
+            </div>
+            <div id="birthPillarPreview" class="flex items-end text-xs text-slate-500 pb-1">
+              <!-- Filled dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calculate -->
+      <div class="mt-4 flex justify-end">
+        <button onclick="calculate()" class="px-5 py-2 rounded-lg bg-gradient-to-r from-accent to-accentLight text-white text-sm font-medium hover:shadow-lg hover:shadow-accent/20 transition-all duration-300 flex items-center gap-2">
+          <i data-lucide="sparkles" class="w-4 h-4"></i> Calculate
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ RESULTS AREA ═══════════════ -->
+  <div id="resultsArea" class="hidden fade-in">
+
+    <!-- True Solar Time Bar -->
+    <section class="mb-4">
+      <div id="tstBar" class="bg-surfaceAlt/50 rounded-lg border border-border/30 px-4 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-1 text-xs text-slate-400">
+      </div>
+    </section>
+
+    <!-- Four Pillars -->
+    <section class="mb-6">
+      <div class="bg-surface rounded-xl border border-border p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <i data-lucide="columns-4" class="w-4 h-4 text-gold"></i>
+          <h2 class="font-semibold text-sm">Four Pillars (八字)</h2>
+          <span id="dunLabel" class="ml-auto text-xs px-2.5 py-0.5 rounded-full bg-accent/10 text-accentLight border border-accent/20"></span>
+        </div>
+        <div class="grid grid-cols-4 gap-3" id="fourPillarsGrid"></div>
+        <div class="mt-3 flex flex-wrap items-center gap-4 text-xs text-slate-400">
+          <span id="xunKongLabel"></span>
+          <span id="solarTermLabel"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Birth BaZi Pillars (if provided) -->
+    <section id="birthPillarSection" class="mb-6 hidden">
+      <div class="bg-surface rounded-xl border border-destiny/20 p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <i data-lucide="user" class="w-4 h-4 text-destiny"></i>
+          <h2 class="font-semibold text-sm">Birth Pillars (本命八字)</h2>
+          <span class="text-[10px] text-destiny/70 ml-1">Destiny Palace highlighted in grid</span>
+        </div>
+        <div class="grid grid-cols-4 gap-3" id="birthPillarsGrid"></div>
+      </div>
+    </section>
+
+    <!-- Chart Display -->
+    <section class="mb-6">
+      <div class="bg-surface rounded-xl border border-border p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <i data-lucide="map" class="w-4 h-4 text-accent"></i>
+          <h2 class="font-semibold text-sm" id="chartTitle">Chart</h2>
+        </div>
+        <!-- QMDJ View -->
+        <div id="qmdjView" class="hidden">
+          <div class="grid grid-cols-3 gap-2 max-w-xl mx-auto" id="qmdjGrid"></div>
+          <!-- QMDJ Legend -->
+          <div class="mt-4 flex flex-wrap items-center gap-3 text-xs justify-center">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-gateGood/30 border border-gateGood/50"></span> Auspicious Gate</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-gateBad/30 border border-gateBad/50"></span> Inauspicious Gate</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-gateNeut/30 border border-gateNeut/50"></span> Neutral Gate</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm bg-destiny/30 border border-destiny/50"></span> Destiny Palace</span>
+          </div>
+        </div>
+        <!-- Liu Ren View -->
+        <div id="liurenView" class="hidden">
+          <div id="liurenContent"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dual Mode: Liu Ren Section embedded under QMDJ -->
+    <section id="dualLiuRenSection" class="mb-6 hidden">
+      <div class="bg-surface rounded-xl border border-accent/20 p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <i data-lucide="layers" class="w-4 h-4 text-accentLight"></i>
+          <h2 class="font-semibold text-sm">Da Liu Ren (大六壬) — Dual View</h2>
+        </div>
+        <div id="dualLiurenContent"></div>
+      </div>
+    </section>
+
+    <!-- Facing Directions -->
+    <section id="remediesSection" class="mb-6 hidden">
+      <div class="bg-surface rounded-xl border border-border p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <i data-lucide="compass" class="w-4 h-4 text-gold"></i>
+          <h2 class="font-semibold text-sm">Optimal Facing Directions</h2>
+        </div>
+        <div id="facingDirectionsContent" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- Layman Explanation -->
+    <section class="mb-6">
+      <div class="bg-surface rounded-xl border border-border p-5">
+        <div class="flex items-center gap-2 mb-3">
+          <i data-lucide="book-open" class="w-4 h-4 text-gateGood"></i>
+          <h2 class="font-semibold text-sm">Layman Explanation</h2>
+        </div>
+        <div id="explanationContent" class="text-sm text-slate-300 leading-relaxed space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- AI Share -->
+    <section class="mb-8">
+      <button onclick="shareWithAI()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-accent/90 to-accentLight/90 hover:from-accent hover:to-accentLight text-white font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2.5 hover:shadow-xl hover:shadow-accent/20">
+        <i data-lucide="share-2" class="w-4 h-4"></i>
+        Share with Gemini / AI
+      </button>
+      <p class="text-xs text-slate-500 text-center mt-2">Copies a formatted prompt to your clipboard for pasting into any AI chatbot</p>
+    </section>
+  </div>
+</main>
+
+<footer class="border-t border-border/30 py-6 text-center text-xs text-slate-600">
+  For reference &amp; educational purposes only. Not professional divination advice.
+</footer>
+
+<script>
+// ============================================================
+// CONSTANTS
+// ============================================================
+const STEMS_CN = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+const BRANCHES_CN = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+const STEMS_EN = ['Jia','Yi','Bing','Ding','Wu','Ji','Geng','Xin','Ren','Gui'];
+const BRANCHES_EN = ['Zi','Chou','Yin','Mao','Chen','Si','Wu','Wei','Shen','You','Xu','Hai'];
+const STEMS_ELEMENT = ['Wood','Wood','Fire','Fire','Earth','Earth','Metal','Metal','Water','Water'];
+const STEMS_ELEMENT_CN = ['木','木','火','火','土','土','金','金','水','水'];
+const BRANCHES_ELEMENT_CN = ['水','土','木','木','土','火','火','土','金','金','土','水'];
+
+const QMDJ_GATES = [
+  {cn:'休',en:'Rest',type:'auspicious'},
+  {cn:'死',en:'Death',type:'inauspicious'},
+  {cn:'伤',en:'Injury',type:'inauspicious'},
+  {cn:'杜',en:'Du/Block',type:'neutral'},
+  {cn:'景',en:'Scenery',type:'neutral'},
+  {cn:'开',en:'Open',type:'auspicious'},
+  {cn:'惊',en:'Startle',type:'inauspicious'},
+  {cn:'生',en:'Life',type:'auspicious'},
+];
+const GATE_DEFAULT_PALACES = [1,2,3,4,9,6,7,8];
+
+const QMDJ_STARS_CN = ['蓬','芮','冲','辅','禽','心','柱','任','英'];
+const QMDJ_STARS_EN = ['Peng','Rui','Chong','Fu','Qin','Xin','Zhu','Ren','Ying'];
+
+const QMDJ_DEITIES_CN = ['值符','腾蛇','太阴','六合','白虎','玄武','九地','九天'];
+const QMDJ_DEITIES_EN = ['Zhi Fu','Teng She','Tai Yin','Liu He','Bai Hu','Xuan Wu','Jiu Di','Jiu Tian'];
+
+const PALACE_GRID = [[4,9,2],[3,5,7],[8,1,6]];
+const PALACE_DIR = {1:'N',2:'SW',3:'E',4:'SE',5:'C',6:'NW',7:'W',8:'NE',9:'S'};
+const PALACE_TRIGRAM = {1:'Kan',2:'Kun',3:'Zhen',4:'Xun',5:'Center',6:'Qian',7:'Dui',8:'Gen',9:'Li'};
+const PALACE_TRIGRAM_CN = {1:'坎',2:'坤',3:'震',4:'巽',5:'中',6:'乾',7:'兑',8:'艮',9:'离'};
+
+// Mapping from Earth branch index to Luo Shu palace number
+const BRANCH_TO_PALACE = {0:1, 1:8, 2:8, 3:3, 4:4, 5:4, 6:9, 7:2, 8:2, 9:7, 10:6, 11:6};
+
+// Yang Dun Ju table: solar term -> [上元, 中元, 下元]
+const YANG_DUN_JU = {
+  '冬至':[1,7,4],'小寒':[2,8,5],'大寒':[3,9,6],
+  '立春':[8,5,2],'雨水':[9,6,3],'惊蛰':[1,7,4],
+  '春分':[3,9,6],'清明':[4,1,7],'谷雨':[5,2,8],
+  '立夏':[4,1,7],'小满':[5,2,8],'芒种':[6,3,9]
+};
+const YIN_DUN_JU = {
+  '夏至':[9,3,6],'小暑':[8,2,5],'大暑':[7,1,4],
+  '立秋':[2,5,8],'处暑':[1,4,7],'白露':[9,3,6],
+  '秋分':[7,1,4],'寒露':[6,9,3],'霜降':[5,8,2],
+  '立冬':[6,9,3],'小雪':[5,8,2],'大雪':[4,7,1]
+};
+
+const SOLAR_TERMS_YANG = ['冬至','小寒','大寒','立春','雨水','惊蛰','春分','清明','谷雨','立夏','小满','芒种'];
+const SOLAR_TERMS_YIN = ['夏至','小暑','大暑','立秋','处暑','白露','秋分','寒露','霜降','立冬','小雪','大雪'];
+
+const MONTH_GENERAL = {
+  '冬至':'丑','小寒':'丑','大寒':'子',
+  '立春':'子','雨水':'亥','惊蛰':'亥',
+  '春分':'戌','清明':'戌','谷雨':'酉',
+  '立夏':'酉','小满':'申','芒种':'申',
+  '夏至':'未','小暑':'午','大暑':'未',
+  '立秋':'午','处暑':'巳','白露':'巳',
+  '秋分':'辰','寒露':'辰','霜降':'卯',
+  '立冬':'卯','小雪':'寅','大雪':'寅'
+};
+
+const STEM_LODGE = {0:2,1:4,2:5,3:7,4:5,5:7,6:8,7:10,8:11,9:1};
+
+const TIANJIANG_CN = ['贵人','腾蛇','朱雀','六合','勾陈','青龙','天空','白虎','太常','玄武','太阴','天后'];
+const TIANJIANG_EN = ['Noble','Snake','Vermilion','Harmony','Hook','Dragon','Void','Tiger','Constable','Dark','Yin','Empress'];
+
+// 8-Palace Luo Shu Ring (clockwise from Palace 1/N)
+const RING_CW = [1, 8, 3, 4, 9, 2, 7, 6];
+// Counter-clockwise from Palace 1/N (for Yin Dun deities)
+const RING_CCW = [1, 6, 7, 2, 9, 4, 3, 8];
+
+// Auspicious gate indices in QMDJ_GATES: Rest=0, Open=5, Life=7
+const AUSPICIOUS_GATES = [
+  {idx: 7, cn: '生门', en: 'Life Gate', desc: 'Financial gain, health, vital action', icon: '🟢'},
+  {idx: 5, cn: '开门', en: 'Open Gate', desc: 'Career moves, launching projects, open communication', icon: '🔵'},
+  {idx: 0, cn: '休门', en: 'Rest Gate', desc: 'Negotiations, relaxation, relationship balance', icon: '🟡'}
+];
+
+let currentMethod = 'qmdj';
+let lastResult = null;
+
+// ============================================================
+// UTILITY
+// ============================================================
+function stemClass(si) {
+  const el = STEMS_ELEMENT[si];
+  if (el==='Wood') return 'stem-wood';
+  if (el==='Fire') return 'stem-fire';
+  if (el==='Earth') return 'stem-earth';
+  if (el==='Metal') return 'stem-metal';
+  return 'stem-water';
+}
+
+function showToast(msg, type='success') {
+  const c = document.getElementById('toastContainer');
+  const d = document.createElement('div');
+  d.className = `toast px-4 py-3 rounded-lg shadow-xl text-sm font-medium flex items-center gap-2 ${type==='success'?'bg-green-600/90 text-white':'bg-red-600/90 text-white'}`;
+  const icon = type==='success' ? 'check-circle' : 'alert-circle';
+  d.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i>${msg}`;
+  c.appendChild(d);
+  if (typeof lucide !== 'undefined') lucide.createIcons({attrs:{class:'w-4 h-4'},nameAttr:'data-lucide'});
+  setTimeout(()=>{ if(d.parentNode) d.remove(); }, 2600);
+}
+
+function setNow() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  const local = new Date(now.getTime() - offset * 60000);
+  document.getElementById('inputDatetime').value = local.toISOString().slice(0, 16);
+  showToast('Time reset to now', 'success');
+}
+
+function setMethod(m) {
+  currentMethod = m;
+  const bq = document.getElementById('btnQMDJ');
+  const bl = document.getElementById('btnLR');
+  if (m==='qmdj') {
+    bq.className = bq.className.replace('toggle-inactive text-slate-400','toggle-active text-white');
+    bl.className = bl.className.replace('toggle-active text-white','toggle-inactive text-slate-400');
+  } else {
+    bl.className = bl.className.replace('toggle-inactive text-slate-400','toggle-active text-white');
+    bq.className = bq.className.replace('toggle-active text-white','toggle-inactive text-slate-400');
+  }
+}
+
+function toggleSection(id) {
+  const el = document.getElementById(id);
+  const isOpen = el.classList.toggle('open');
+  const chevronId = id === 'locationSection' ? 'locationChevron' : 'birthChevron';
+  const chevron = document.getElementById(chevronId);
+  if (chevron) chevron.style.transform = isOpen ? 'rotate(180deg)' : '';
+}
+
+function onLocationChange() {
+  const sel = document.getElementById('inputLocation');
+  const opt = sel.options[sel.selectedIndex];
+  if (sel.value === 'custom') return;
+
+  document.getElementById('inputUTCOffset').value = parseFloat(sel.value);
+  if (opt.dataset.lng) {
+    document.getElementById('inputLongitude').value = parseFloat(opt.dataset.lng);
+  }
+}
+
+// ============================================================
+// TRUE SOLAR TIME (真太阳时)
+// ============================================================
+function getTrueSolarTime(civilDate, utcOffsetHours, longitude) {
+  const standardMeridian = utcOffsetHours * 15;
+  const lngDiff = longitude - standardMeridian;
+  const timeCorrectionMin = lngDiff * 4;
+  const dayOfYear = getDayOfYear(civilDate);
+  const B = (2 * Math.PI / 365) * (dayOfYear - 81);
+  const eqOfTimeMin = 9.87 * Math.sin(2*B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+  const totalCorrectionMin = timeCorrectionMin + eqOfTimeMin;
+  const trueSolarDate = new Date(civilDate.getTime() + totalCorrectionMin * 60000);
+  return {
+    civilDate,
+    trueSolarDate,
+    timeCorrectionMin: Math.round(totalCorrectionMin * 10) / 10,
+    lngCorrectionMin: Math.round(timeCorrectionMin * 10) / 10,
+    eqOfTimeMin: Math.round(eqOfTimeMin * 10) / 10,
+    standardMeridian,
+    longitude
+  };
+}
+
+function getDayOfYear(date) {
+  const start = new Date(date.getFullYear(), 0, 0);
+  const diff = date - start;
+  return Math.floor(diff / 86400000);
+}
+
+// ============================================================
+// FOUR PILLARS CALCULATION (using lunar-javascript)
+// ============================================================
+function parseGZ(gz) {
+  if (!gz || gz.length < 2) return {stem:0, branch:0, stemCN:'甲', branchCN:'子'};
+  const si = STEMS_CN.indexOf(gz[0]);
+  const bi = BRANCHES_CN.indexOf(gz[1]);
+  return {
+    stem: si >= 0 ? si : 0,
+    branch: bi >= 0 ? bi : 0,
+    stemCN: si >= 0 ? gz[0] : '甲',
+    branchCN: bi >= 0 ? gz[1] : '子',
+    stemEN: si >= 0 ? STEMS_EN[si] : 'Jia',
+    branchEN: bi >= 0 ? BRANCHES_EN[bi] : 'Zi',
+    element: si >= 0 ? STEMS_ELEMENT[si] : 'Wood',
+    elementCN: si >= 0 ? STEMS_ELEMENT_CN[si] : '木'
+  };
+}
+
+function getFourPillars(dt) {
+  const solar = Solar.fromDate(dt);
+  const lunar = solar.getLunar();
+  const eightChar = lunar.getEightChar();
+
+  const yearGZ = eightChar.getYear();
+  const monthGZ = eightChar.getMonth();
+  const dayGZ = eightChar.getDay();
+  const timeGZ = eightChar.getTime();
+
+  const year = parseGZ(yearGZ);
+  const fpMonth = parseGZ(monthGZ);
+  const day = parseGZ(dayGZ);
+  const hour = parseGZ(timeGZ);
+
+  // Xun Kong (Void) - from day pillar
+  const dayNum = day.stem;
+  const dayBranchNum = day.branch;
+  const diff = (dayBranchNum - dayNum % 10 + 12) % 12;
+  let xunType;
+  if (diff <= 1) xunType = 0;
+  else if (diff <= 3) xunType = 1;
+  else if (diff <= 5) xunType = 2;
+  else if (diff <= 7) xunType = 3;
+  else if (diff <= 9) xunType = 4;
+  else xunType = 5;
+  const xunHeadBranches = [0,10,8,6,4,2];
+  const xunHB = xunHeadBranches[xunType];
+  const void1 = (xunHB + 10) % 12;
+  const void2 = (xunHB + 11) % 12;
+
+  // Hour xun kong
+  const hDiff = (hour.branch - hour.stem % 10 + 12) % 12;
+  let hXunType;
+  if (hDiff <= 1) hXunType = 0;
+  else if (hDiff <= 3) hXunType = 1;
+  else if (hDiff <= 5) hXunType = 2;
+  else if (hDiff <= 7) hXunType = 3;
+  else if (hDiff <= 9) hXunType = 4;
+  else hXunType = 5;
+  const hXunHB = xunHeadBranches[hXunType];
+  const hVoid1 = (hXunHB + 10) % 12;
+  const hVoid2 = (hXunHB + 11) % 12;
+
+  let currentSolarTerm = '';
+  let isYangDun = true;
+  try {
+    const prevJieQi = lunar.getPrevJieQi(true);
+    if (prevJieQi) currentSolarTerm = prevJieQi.getName();
+  } catch(e) {}
+
+  const dtMonth = dt.getMonth() + 1;
+  const dayOfMonth = dt.getDate();
+  if (dtMonth >= 12 || dtMonth <= 5) {
+    isYangDun = true;
+    if (!currentSolarTerm || !YANG_DUN_JU[currentSolarTerm]) {
+      currentSolarTerm = approximateSolarTerm(dtMonth, dayOfMonth, true);
+    }
+  } else {
+    isYangDun = false;
+    if (!currentSolarTerm || !YIN_DUN_JU[currentSolarTerm]) {
+      currentSolarTerm = approximateSolarTerm(dtMonth, dayOfMonth, false);
+    }
+  }
+
+  if (isYangDun && !YANG_DUN_JU[currentSolarTerm]) {
+    if (YIN_DUN_JU[currentSolarTerm]) isYangDun = false;
+    else currentSolarTerm = approximateSolarTerm(dtMonth, dayOfMonth, false);
+  }
+  if (!isYangDun && !YIN_DUN_JU[currentSolarTerm]) {
+    if (YANG_DUN_JU[currentSolarTerm]) isYangDun = true;
+    else currentSolarTerm = approximateSolarTerm(dtMonth, dayOfMonth, true);
+  }
+
+  return {
+    year, month: fpMonth, day, hour,
+    dayXunKong: [BRANCHES_CN[void1], BRANCHES_CN[void2]],
+    hourXunKong: [BRANCHES_CN[hVoid1], BRANCHES_CN[hVoid2]],
+    solarTerm: currentSolarTerm,
+    isYangDun
+  };
+}
+
+function approximateSolarTerm(month, day, isYang) {
+  const terms = isYang ? SOLAR_TERMS_YANG : SOLAR_TERMS_YIN;
+  let idx;
+  if (isYang) {
+    if (month === 12) idx = Math.floor(day / 15);
+    else if (month === 1) idx = 2 + Math.floor(day / 15);
+    else if (month === 2) idx = 4 + Math.floor(day / 15);
+    else if (month === 3) idx = 6 + Math.floor(day / 15);
+    else if (month === 4) idx = 8 + Math.floor(day / 15);
+    else if (month === 5) idx = 10 + Math.floor(day / 15);
+    else idx = 0;
+  } else {
+    if (month === 6) idx = Math.floor(day / 15);
+    else if (month === 7) idx = 2 + Math.floor(day / 15);
+    else if (month === 8) idx = 4 + Math.floor(day / 15);
+    else if (month === 9) idx = 6 + Math.floor(day / 15);
+    else if (month === 10) idx = 8 + Math.floor(day / 15);
+    else if (month === 11) idx = 10 + Math.floor(day / 15);
+    else idx = 0;
+  }
+  idx = Math.min(idx, terms.length - 1);
+  return terms[idx];
+}
+
+// ============================================================
+// QMDJ ENGINE
+// ============================================================
+function calculateQMDJ(fp) {
+  const {day, hour, solarTerm, isYangDun} = fp;
+
+  // Calculate Fu Tou (符头) from Day Stem and Day Branch
+  const dayStemIdx = day.stem;
+  const dayBranchIdx = day.branch;
+  const fuTouStemOffset = dayStemIdx % 5;
+  const fuTouBranchIdx = (dayBranchIdx - fuTouStemOffset + 12) % 12;
+
+  // Fu Tou Branch mapping:
+  // Zi, Wu, Mao, You (0, 6, 3, 9) = Upper Yuan (0)
+  // Yin, Shen, Si, Hai (2, 8, 5, 11) = Middle Yuan (1)
+  // Chen, Xu, Chou, Wei (4, 10, 1, 7) = Lower Yuan (2)
+  let yuanIdx = 0;
+  if ([0, 6, 3, 9].includes(fuTouBranchIdx)) yuanIdx = 0;      // Upper Yuan
+  else if ([2, 8, 5, 11].includes(fuTouBranchIdx)) yuanIdx = 1; // Middle Yuan
+  else yuanIdx = 2;                                             // Lower Yuan
+
+  const yuanNames = ['Upper', 'Middle', 'Lower'];
+  const yuanCN = ['上元', '中元', '下元'];
+
+  const juTable = isYangDun ? YANG_DUN_JU : YIN_DUN_JU;
+  let ju = 1;
+  if (juTable[solarTerm]) {
+    ju = juTable[solarTerm][yuanIdx];
+  } else {
+    ju = isYangDun ? ((yuanIdx + 1) % 9 + 1) : (9 - yuanIdx);
+  }
+
+  // Earth Plate — stems placed sequentially from Ju palace
+  const earthPlate = {};
+  const stemsOrder = [4,5,6,7,8,9,3,2,1]; // 戊己庚辛壬癸丙丁乙甲
+  for (let i = 0; i < 9; i++) {
+    const palace = isYangDun ? ((ju - 1 + i) % 9 + 1) : ((ju - 1 - i + 9) % 9 + 1);
+    earthPlate[palace] = stemsOrder[i];
+  }
+
+  // Xun Shou (旬首) — determine which Xun the hour pillar belongs to
+  const hourStemIdx = hour.stem;
+  const hourBranchIdx = hour.branch;
+  const hourDiff = (hourBranchIdx - hourStemIdx + 12) % 12;
+  let xunType;
+  if (hourDiff <= 1) xunType = 0;
+  else if (hourDiff <= 3) xunType = 1;
+  else if (hourDiff <= 5) xunType = 2;
+  else if (hourDiff <= 7) xunType = 3;
+  else if (hourDiff <= 9) xunType = 4;
+  else xunType = 5;
+
+  const xunDunJia = [4,5,6,7,8,9]; // concealed stems for each Xun
+  const dunJiaStem = xunDunJia[xunType];
+
+  // Find palaces on the Earth Plate
+  let dunJiaPalace = 1;
+  for (let p = 1; p <= 9; p++) {
+    if (earthPlate[p] === dunJiaStem) { dunJiaPalace = p; break; }
+  }
+
+  let hourStemPalace = 1;
+  for (let p = 1; p <= 9; p++) {
+    if (earthPlate[p] === hourStemIdx) { hourStemPalace = p; break; }
+  }
+
+  // Base setup for Palace 5 borrowing (Center borrows Palace 2/Kun in standard rotation)
+  const baseP = dunJiaPalace === 5 ? 2 : dunJiaPalace;
+  const targetP = hourStemPalace === 5 ? 2 : hourStemPalace;
+
+  // Fixed 8 perimeter stars ring clockwise starting from Palace 1 (Kan):
+  // Peng(0), Ren(7), Chong(2), Fu(3), Ying(8), Rui(1), Zhu(6), Xin(5)
+  const STAR_RING_8 = [0, 7, 2, 3, 8, 1, 6, 5];
+
+  // Fixed 8 gates ring clockwise starting from Palace 1 (Kan):
+  // Rest(0), Life(7), Injury(2), Du(3), Scenery(4), Death(1), Startle(6), Open(5)
+  const GATE_RING_8 = [0, 7, 2, 3, 4, 1, 6, 5];
+
+  // === Heaven Plate (Stems) & Stars ===
+  const startRingIdx = RING_CW.indexOf(baseP);
+  const targetRingIdx = RING_CW.indexOf(targetP);
+  const shift = (targetRingIdx - startRingIdx + 8) % 8;
+
+  const heavenPlate = {};
+  const stars = {};
+
+  for (let i = 0; i < 8; i++) {
+    // Shift Heaven Stems
+    const srcPalace = RING_CW[i];
+    const dstPalace = RING_CW[(i + shift) % 8];
+    heavenPlate[dstPalace] = earthPlate[srcPalace];
+    
+    // Shift Stars along STAR_RING_8 and RING_CW
+    const starIndexInRing = STAR_RING_8[i];
+    const starDstPalace = RING_CW[(i + shift) % 8];
+    stars[starDstPalace] = starIndexInRing;
+  }
+  stars[5] = 4; // Qin star stays in center
+
+  // === Gates ===
+  // Duty Gate (Zhi Shi) flies through 9 Luo Shu palaces based on hour steps from Xun Shou
+  const xunHeadBranches = [0, 10, 8, 6, 4, 2]; // Zi, Xu, Shen, Wu, Chen, Yin
+  const xunShouBranchIdx = xunHeadBranches[xunType];
+  const hourSteps = (hourBranchIdx - xunShouBranchIdx + 12) % 12;
+
+  let dutyGatePalace = isYangDun
+    ? ((dunJiaPalace - 1 + hourSteps) % 9) + 1
+    : ((dunJiaPalace - 1 - hourSteps + 18) % 9) + 1;
+  
+  if (dutyGatePalace === 5) dutyGatePalace = 2; // Borrow Kun 2
+
+  const dutyGateRingIdxInBase = RING_CW.indexOf(baseP);
+  const dutyGateIdx = GATE_RING_8[dutyGateRingIdxInBase];
+
+  const dutyGateRingIdxInSequence = GATE_RING_8.indexOf(dutyGateIdx);
+  const dutyGateStartRingIdx = RING_CW.indexOf(dutyGatePalace);
+
+  const gates = {};
+  for (let i = 0; i < 8; i++) {
+    const palace = RING_CW[(dutyGateStartRingIdx + i) % 8];
+    gates[palace] = GATE_RING_8[(dutyGateRingIdxInSequence + i) % 8];
+  }
+
+  // === Deities (八神) ===
+  const deities = {};
+  const deityRing = isYangDun ? RING_CW : RING_CCW;
+  const deityStartIdx = deityRing.indexOf(targetP);
+
+  for (let i = 0; i < 8; i++) {
+    const palace = deityRing[(deityStartIdx + i) % 8];
+    deities[palace] = i;
+  }
+
+  return {
+    ju, isYangDun, yuanCN: yuanCN[yuanIdx], yuanEN: yuanNames[yuanIdx],
+    earthPlate, heavenPlate, gates, stars, deities, dunJiaPalace, hourStemPalace,
+    solarTerm, dunJiaStem
+  };
+}
+
+// ============================================================
+// DA LIU REN ENGINE
+// ============================================================
+function calculateLiuRen(fp) {
+  const {day, hour, solarTerm} = fp;
+
+  let monthGeneral = MONTH_GENERAL[solarTerm] || '丑';
+  const mgIdx = BRANCHES_CN.indexOf(monthGeneral);
+
+  const earthPlateLR = [0,1,2,3,4,5,6,7,8,9,10,11];
+
+  const hourBranch = hour.branch;
+  const offset = (mgIdx - hourBranch + 12) % 12;
+  const heavenPlateLR = [];
+  for (let i = 0; i < 12; i++) {
+    heavenPlateLR[i] = (i + offset + 12) % 12;
+  }
+
+  const dayStemIdx = day.stem;
+  const dayBranchIdx = day.branch;
+  const stemLodge = STEM_LODGE[dayStemIdx];
+
+  const lesson1 = heavenPlateLR[stemLodge];
+  const lesson2 = heavenPlateLR[lesson1];
+  const lesson3 = heavenPlateLR[dayBranchIdx];
+  const lesson4 = heavenPlateLR[lesson3];
+
+  let trans1, trans2, trans3;
+  let method = '';
+
+  const branchElements = [0,4,2,2,4,1,1,4,3,3,4,0];
+
+  function overcomes(a, b) {
+    if (a===0 && b===1) return true;
+    if (a===1 && b===3) return true;
+    if (a===3 && b===2) return true;
+    if (a===2 && b===4) return true;
+    if (a===4 && b===0) return true;
+    return false;
+  }
+
+  const lowerBranches = [stemLodge, lesson1, dayBranchIdx, lesson3];
+  const upperBranches = [lesson1, lesson2, lesson3, lesson4];
+
+  let found = false;
+  for (let i = 0; i < 4; i++) {
+    if (overcomes(branchElements[upperBranches[i]], branchElements[lowerBranches[i]])) {
+      trans1 = upperBranches[i]; method = '克'; found = true; break;
+    }
+  }
+  if (!found) {
+    for (let i = 0; i < 4; i++) {
+      if (overcomes(branchElements[lowerBranches[i]], branchElements[upperBranches[i]])) {
+        trans1 = lowerBranches[i]; method = '贼'; found = true; break;
+      }
+    }
+  }
+  if (!found) {
+    const dayElement = branchElements[dayStemIdx % 12];
+    for (let i = 0; i < 4; i++) {
+      if (branchElements[upperBranches[i]] === dayElement) {
+        trans1 = upperBranches[i]; method = '比用'; found = true; break;
+      }
+    }
+  }
+  if (!found) {
+    trans1 = lesson1; method = 'default';
+  }
+
+  trans2 = heavenPlateLR[trans1];
+  trans3 = heavenPlateLR[trans2];
+
+  return {
+    monthGeneral, monthGeneralIdx: mgIdx,
+    earthPlate: earthPlateLR, heavenPlate: heavenPlateLR,
+    lessons: [
+      {upper: lesson1, lower: stemLodge, label: '1st'},
+      {upper: lesson2, lower: lesson1, label: '2nd'},
+      {upper: lesson3, lower: dayBranchIdx, label: '3rd'},
+      {upper: lesson4, lower: lesson3, label: '4th'}
+    ],
+    transmissions: [
+      {branch: trans1, label: 'Initial', cnLabel: '初传'},
+      {branch: trans2, label: 'Middle', cnLabel: '中传'},
+      {branch: trans3, label: 'Final', cnLabel: '末传'}
+    ],
+    method, dayBranchIdx
+  };
+}
+
+// ============================================================
+// BIRTH BAZI
+// ============================================================
+function getBirthPillars() {
+  const birthInput = document.getElementById('inputBirthDatetime').value;
+  if (!birthInput) return null;
+  const dt = new Date(birthInput);
+  if (isNaN(dt.getTime())) return null;
+
+  const utcOffset = parseFloat(document.getElementById('inputUTCOffset').value) || 8;
+  const longitude = parseFloat(document.getElementById('inputLongitude').value) || 103.8;
+  const tst = getTrueSolarTime(dt, utcOffset, longitude);
+  const adjustedDate = tst.trueSolarDate;
+
+  const fp = getFourPillars(adjustedDate);
+  const gender = document.getElementById('inputGender').value;
+
+  const birthYearBranch = fp.year.branch;
+  const destinyPalace = BRANCH_TO_PALACE[birthYearBranch];
+
+  return {
+    fp,
+    gender,
+    destinyPalace,
+    birthDateStr: birthInput,
+    adjustedDate
+  };
+}
+
+// ============================================================
+// UI RENDERING
+// ============================================================
+function renderFourPillars(fp) {
+  const grid = document.getElementById('fourPillarsGrid');
+  const pillars = [
+    {data: fp.year, label: 'Year', cnLabel: '年柱'},
+    {data: fp.month, label: 'Month', cnLabel: '月柱'},
+    {data: fp.day, label: 'Day', cnLabel: '日柱'},
+    {data: fp.hour, label: 'Hour', cnLabel: '时柱'}
+  ];
+
+  grid.innerHTML = pillars.map(p => `
+    <div class="bg-surfaceAlt rounded-lg p-3 text-center border border-border/50">
+      <div class="text-[10px] text-slate-500 mb-1.5 uppercase tracking-wider">${p.label}</div>
+      <div class="text-2xl font-bold mb-1">
+        <span class="${stemClass(p.data.stem)}">${p.data.stemCN}</span><span class="text-slate-300">${p.data.branchCN}</span>
+      </div>
+      <div class="text-[10px] text-slate-500">${p.data.stemEN} ${p.data.branchEN}</div>
+      <div class="text-[10px] mt-1 text-slate-600">${p.data.elementCN} ${p.data.element}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('xunKongLabel').innerHTML =
+    `<span class="text-gold">Xun Kong (Void):</span> Day ${fp.dayXunKong.join(', ')} | Hour ${fp.hourXunKong.join(', ')}`;
+
+  document.getElementById('solarTermLabel').innerHTML =
+    `<span class="text-accentLight">Solar Term:</span> ${fp.solarTerm}`;
+
+  const dunText = fp.isYangDun ? 'Yang Dun (阳遁)' : 'Yin Dun (阴遁)';
+  document.getElementById('dunLabel').textContent = dunText;
+}
+
+function renderBirthPillars(birthInfo) {
+  const section = document.getElementById('birthPillarSection');
+  const grid = document.getElementById('birthPillarsGrid');
+
+  if (!birthInfo) {
+    section.classList.add('hidden');
+    return;
+  }
+
+  section.classList.remove('hidden');
+  const fp = birthInfo.fp;
+  const pillars = [
+    {data: fp.year, label: 'Year'},
+    {data: fp.month, label: 'Month'},
+    {data: fp.day, label: 'Day'},
+    {data: fp.hour, label: 'Hour'}
+  ];
+
+  grid.innerHTML = pillars.map(p => `
+    <div class="bg-surfaceAlt rounded-lg p-3 text-center border border-destiny/15">
+      <div class="text-[10px] text-destiny/70 mb-1.5 uppercase tracking-wider">${p.label}</div>
+      <div class="text-xl font-bold mb-1">
+        <span class="${stemClass(p.data.stem)}">${p.data.stemCN}</span><span class="text-slate-300">${p.data.branchCN}</span>
+      </div>
+      <div class="text-[10px] text-slate-500">${p.data.stemEN} ${p.data.branchEN}</div>
+    </div>
+  `).join('');
+
+  const dpEl = document.createElement('div');
+  dpEl.className = 'destiny-info-bar mt-3 text-xs text-destiny/80 flex items-center gap-2';
+  dpEl.innerHTML = `<i data-lucide="target" class="w-3.5 h-3.5"></i> Destiny Palace (本命宫): Palace ${birthInfo.destinyPalace} (${PALACE_DIR[birthInfo.destinyPalace]}, ${PALACE_TRIGRAM[birthInfo.destinyPalace]})${birthInfo.gender ? ' | Gender: ' + (birthInfo.gender === 'male' ? 'Male (阳)' : 'Female (阴)') : ''}`;
+  grid.parentNode.appendChild(dpEl);
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderQMDJ(qmdj, fp, destinyPalace) {
+  const grid = document.getElementById('qmdjGrid');
+  grid.innerHTML = '';
+
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) {
+      const palace = PALACE_GRID[row][col];
+      const earthStem = qmdj.earthPlate[palace];
+      const heavenStem = qmdj.heavenPlate[palace];
+      const gateIdx = qmdj.gates[palace];
+      const starIdx = qmdj.stars[palace];
+      const deityIdx = qmdj.deities[palace];
+
+      const gate = gateIdx !== undefined ? QMDJ_GATES[gateIdx] : null;
+      const star = starIdx !== undefined ? {cn: QMDJ_STARS_CN[starIdx], en: QMDJ_STARS_EN[starIdx]} : null;
+      const deity = deityIdx !== undefined ? {cn: QMDJ_DEITIES_CN[deityIdx], en: QMDJ_DEITIES_EN[deityIdx]} : null;
+
+      let gateClass = 'gate-neutral';
+      if (gate) {
+        if (gate.type === 'auspicious') gateClass = 'gate-auspicious';
+        else if (gate.type === 'inauspicious') gateClass = 'gate-inauspicious';
+      }
+
+      const isCenter = palace === 5;
+      const isDestiny = destinyPalace && palace === destinyPalace;
+
+      grid.innerHTML += `
+        <div class="palace-cell rounded-lg p-3 ${isCenter ? 'ring-1 ring-gold/30' : ''} ${isDestiny ? 'palace-destiny' : ''} min-h-[180px] relative">
+          ${isDestiny ? '<div class="destiny-badge">本命 DESTINY</div>' : ''}
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[10px] text-slate-500 font-medium">${PALACE_DIR[palace]} · P${palace}</span>
+            <span class="text-[9px] text-slate-600">${PALACE_TRIGRAM_CN[palace]}</span>
+          </div>
+          <div class="text-center mb-1.5">
+            <span class="text-[9px] text-slate-500 block">Heaven</span>
+            <span class="text-lg font-bold ${heavenStem !== undefined ? stemClass(heavenStem) : ''}">${heavenStem !== undefined ? STEMS_CN[heavenStem] : '<span class="opacity-0">-</span>'}</span>
+          </div>
+          <div class="text-center mb-2">
+            <span class="text-[9px] text-slate-500 block">Earth</span>
+            <span class="text-sm ${stemClass(earthStem)}">${STEMS_CN[earthStem]}</span>
+          </div>
+          ${gate ? `
+          <div class="text-center mb-1.5">
+            <span class="inline-block px-2 py-0.5 rounded text-[11px] font-medium ${gateClass}">
+              ${gate.cn} ${gate.en}
+            </span>
+          </div>` : ''}
+          ${star ? `
+          <div class="text-center text-[10px] text-slate-400 mb-1">
+            ★ ${star.cn} ${star.en}
+          </div>` : ''}
+          ${deity ? `
+          <div class="text-center text-[10px] text-purple-400/70">
+            ◆ ${deity.cn}
+          </div>` : ''}
+        </div>
+      `;
+    }
+  }
+
+  const juInfo = document.createElement('div');
+  juInfo.className = 'text-center mb-3 text-sm';
+  const dunType = qmdj.isYangDun ? 'Yang Dun' : 'Yin Dun';
+  juInfo.innerHTML = `<span class="text-gold font-semibold">${dunType} Ju ${qmdj.ju}</span> <span class="text-slate-500">(${qmdj.yuanCN})</span> <span class="text-slate-600">· ${qmdj.solarTerm}</span>`;
+
+  const qmdjViewEl = document.getElementById('qmdjView');
+  const oldJuInfo = qmdjViewEl.querySelector('.ju-info-bar');
+  if (oldJuInfo) oldJuInfo.remove();
+  juInfo.classList.add('ju-info-bar');
+  qmdjViewEl.insertBefore(juInfo, grid);
+
+  document.getElementById('chartTitle').textContent = `Qi Men Dun Jia — ${dunType} Ju ${qmdj.ju} (${qmdj.yuanCN})`;
+}
+
+function renderLiuRenContent(lr, containerId) {
+  const content = document.getElementById(containerId);
+
+  let html = `
+    <div class="text-center mb-4 text-sm">
+      <span class="text-gold font-semibold">Month General (月将):</span>
+      <span class="text-slate-300 ml-1">${BRANCHES_CN[lr.monthGeneralIdx]} ${BRANCHES_EN[lr.monthGeneralIdx]}</span>
+      <span class="text-slate-600 ml-3">Method: ${lr.method}</span>
+    </div>
+  `;
+
+  html += `
+    <div class="mb-5">
+      <div class="text-xs text-slate-500 mb-2 text-center">Heaven Plate (天盘) over Earth Plate (地盘)</div>
+      <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-12 gap-1.5">
+        ${Array.from({length:12}, (_, i) => {
+          const hBranch = lr.heavenPlate[i];
+          const eBranch = i;
+          return `
+            <div class="bg-surfaceAlt rounded-md p-2 text-center border border-border/30">
+              <div class="text-sm font-bold text-accentLight">${BRANCHES_CN[hBranch]}</div>
+              <div class="text-[9px] text-slate-500">over</div>
+              <div class="text-xs text-slate-400">${BRANCHES_CN[eBranch]}</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+
+  html += `
+    <div class="mb-5">
+      <div class="text-xs text-slate-500 mb-2 font-medium">Four Lessons (四课)</div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        ${lr.lessons.map((l) => `
+          <div class="bg-surfaceAlt rounded-lg p-3 border border-border/30 text-center">
+            <div class="text-[10px] text-slate-500 mb-1.5">${l.label} Lesson</div>
+            <div class="text-lg font-bold text-accentLight">${BRANCHES_CN[l.upper]}</div>
+            <div class="text-[9px] text-slate-500 my-0.5">over</div>
+            <div class="text-sm text-slate-400">${BRANCHES_CN[l.lower]}</div>
+            <div class="text-[9px] text-slate-600 mt-1">${BRANCHES_EN[l.upper]} / ${BRANCHES_EN[l.lower]}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  html += `
+    <div>
+      <div class="text-xs text-slate-500 mb-2 font-medium">Three Transmissions (三传)</div>
+      <div class="flex items-center justify-center gap-2 flex-wrap">
+        ${lr.transmissions.map((t, i) => `
+          <div class="bg-surfaceAlt rounded-lg p-4 border border-accent/20 text-center min-w-[120px]">
+            <div class="text-[10px] text-slate-500 mb-1">${t.cnLabel}</div>
+            <div class="text-2xl font-bold text-gold">${BRANCHES_CN[t.branch]}</div>
+            <div class="text-[10px] text-slate-400">${BRANCHES_EN[t.branch]}</div>
+            <div class="text-[9px] text-slate-600 mt-1">${t.label} Transmission</div>
+          </div>
+          ${i < 2 ? '<i data-lucide="arrow-right" class="w-4 h-4 text-slate-600 hidden sm:block"></i>' : ''}
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  content.innerHTML = html;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function renderLiuRen(lr) {
+  renderLiuRenContent(lr, 'liurenContent');
+  document.getElementById('chartTitle').textContent = 'Da Liu Ren (大六壬)';
+}
+
+function renderTSTBar(tst) {
+  const bar = document.getElementById('tstBar');
+  if (!tst) { bar.innerHTML = ''; return; }
+
+  const civilStr = tst.civilDate.toLocaleString();
+  const trueStr = tst.trueSolarDate.toLocaleString();
+  const corrSign = tst.timeCorrectionMin >= 0 ? '+' : '';
+
+  bar.innerHTML = `
+    <span class="flex items-center gap-1.5"><i data-lucide="clock" class="w-3.5 h-3.5 text-accent"></i>
+      <span class="text-slate-300">Civil Time:</span> ${civilStr}</span>
+    <span class="flex items-center gap-1.5"><i data-lucide="sun" class="w-3.5 h-3.5 text-gold"></i>
+      <span class="text-slate-300">True Solar Time:</span> <span class="text-gold font-medium">${trueStr}</span></span>
+    <span class="flex items-center gap-1.5"><i data-lucide="move-horizontal" class="w-3.5 h-3.5 text-slate-500"></i>
+      Correction: ${corrSign}${tst.timeCorrectionMin} min
+      (Lng ${tst.lngCorrectionMin >= 0 ? '+' : ''}${tst.lngCorrectionMin} + Eq ${tst.eqOfTimeMin >= 0 ? '+' : ''}${tst.eqOfTimeMin})</span>
+    <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-slate-500"></i>
+      ${tst.longitude}°E | Std Meridian ${tst.standardMeridian}°E</span>
+  `;
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ============================================================
+// FACING DIRECTIONS
+// ============================================================
+function renderFacingDirections(qmdj, birthInfo, destinyPalace) {
+  const container = document.getElementById('facingDirectionsContent');
+  if (!qmdj) { container.innerHTML = '<p class="text-xs text-slate-500">Calculate a QMDJ chart to see facing directions.</p>'; return; }
+
+  let html = '';
+
+  const foundGates = [];
+  for (const ag of AUSPICIOUS_GATES) {
+    for (let p = 1; p <= 9; p++) {
+      if (qmdj.gates[p] === ag.idx) {
+        foundGates.push({...ag, palace: p, dir: PALACE_DIR[p], trigram: PALACE_TRIGRAM[p]});
+        break;
+      }
+    }
+  }
+
+  if (foundGates.length > 0) {
+    const best = foundGates[0];
+    html += `
+      <div class="direction-card">
+        <div class="flex items-center gap-2 mb-1.5">
+          <span class="text-lg">${best.icon}</span>
+          <span class="text-gateGood font-semibold text-sm">${best.cn} ${best.en}</span>
+          <span class="ml-auto text-xs px-2 py-0.5 rounded-full bg-gateGood/10 text-gateGood border border-gateGood/20">PRIMARY</span>
+        </div>
+        <div class="text-sm text-slate-200 mb-1">Face <strong class="text-gold">${best.dir}</strong> (Palace ${best.palace}, ${best.trigram})</div>
+        <div class="text-xs text-slate-400">${best.desc}</div>
+      </div>
+    `;
+  }
+
+  for (let i = 1; i < foundGates.length; i++) {
+    const g = foundGates[i];
+    html += `
+      <div class="direction-card">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-lg">${g.icon}</span>
+          <span class="text-gateGood font-medium text-sm">${g.cn} ${g.en}</span>
+        </div>
+        <div class="text-sm text-slate-200 mb-0.5">Face <strong class="text-slate-100">${g.dir}</strong> (Palace ${g.palace}, ${g.trigram})</div>
+        <div class="text-xs text-slate-400">${g.desc}</div>
+      </div>
+    `;
+  }
+
+  if (destinyPalace && destinyPalace !== 5) {
+    const dpDir = PALACE_DIR[destinyPalace];
+    const dpTri = PALACE_TRIGRAM[destinyPalace];
+    html += `
+      <div class="direction-card" style="border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.04);">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-lg">🧘</span>
+          <span class="text-destiny font-medium text-sm">Destiny Palace (本命宫)</span>
+          <span class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-destiny/10 text-destiny border border-destiny/20">PERSONAL</span>
+        </div>
+        <div class="text-sm text-slate-200 mb-0.5">Face <strong class="text-destiny">${dpDir}</strong> (Palace ${destinyPalace}, ${dpTri})</div>
+        <div class="text-xs text-slate-400">For meditation, introspection, and deep planning. Your innate directional anchor.</div>
+      </div>
+    `;
+  }
+
+  if (foundGates.length === 0 && !destinyPalace) {
+    html += '<p class="text-xs text-slate-500">No auspicious gates found in this chart.</p>';
+  }
+
+  container.innerHTML = html;
+}
+
+// ============================================================
+// LAYMAN EXPLANATION
+// ============================================================
+function renderExplanation(fp, qmdj, lr, birthInfo, isDual) {
+  const el = document.getElementById('explanationContent');
+  let html = '';
+
+  const showQMDJ = qmdj !== null;
+  const showLR = lr !== null;
+
+  if (showQMDJ && qmdj) {
+    const dunType = qmdj.isYangDun ? 'Yang Dun (阳遁)' : 'Yin Dun (阴遁)';
+    html += `<p><strong class="text-gold">Ju ${qmdj.ju} (${dunType}, ${qmdj.yuanCN}):</strong> This means the "ruling number" for this chart is ${qmdj.ju}. In ${dunType}, energy moves ${qmdj.isYangDun ? 'forward/ascending' : 'backward/descending'}. The ${qmdj.yuanEN} Yuan indicates which third of the solar term period (~5 days) we are in. Ju ${qmdj.ju} places the stem <strong>Wu (戊)</strong> at Palace ${qmdj.ju} as the starting position on the Earth Plate.</p>`;
+
+    html += `<p><strong class="text-gateGood">Auspicious Gates</strong> (Open 开, Life 生, Rest 休) suggest favorable conditions — open doors to opportunity, growth energy, or restful stability respectively. <strong class="text-gateBad">Inauspicious Gates</strong> (Death 死, Injury 伤, Startle 惊) warn of obstacles, harm, or sudden shocks. <strong class="text-gateNeut">Neutral Gates</strong> (Scenery 景, Du 杜) are mixed — Scenery relates to appearance/fame, Du to blockage or concealment.</p>`;
+
+    html += `<p><strong class="text-accentLight">Nine Stars:</strong> Each palace has a visiting star. Tian Peng (蓬) relates to water/risk, Tian Ren (任) to responsibility/support, Tian Chong (冲) to sudden action, Tian Fu (辅) to assistance, Tian Ying (英) to brilliance/fire, Tian Rui (芮) to illness/earth, Tian Qin (禽) to center/stability, Tian Xin (心) to medicine/judgment, Tian Zhu (柱) to structure/pillars.</p>`;
+
+    html += `<p><strong class="text-purple-400">Eight Deities:</strong> These represent invisible spiritual influences. Zhi Fu (值符) brings authority. Teng She (腾蛇) brings confusion/illusion. Tai Yin (太阴) offers hidden protection. Liu He (六合) promotes harmony. Bai Hu (白虎) signals danger. Xuan Wu (玄武) relates to deception. Jiu Di (九地) grounds and stabilizes. Jiu Tian (九天) elevates and activates.</p>`;
+
+    html += `<p><strong class="text-slate-300">Xun Kong (Void):</strong> Day Void at ${fp.dayXunKong.join(' & ')} and Hour Void at ${fp.hourXunKong.join(' & ')}. Void positions indicate emptiness or unrealized potential. Pay attention to which palace(s) these void branches fall in — those areas may lack substance or require extra effort.</p>`;
+
+    if (birthInfo) {
+      html += `<p><strong class="text-destiny">Destiny Palace (本命宫):</strong> Based on your Birth Year Branch ${BRANCHES_CN[birthInfo.fp.year.branch]} (${BRANCHES_EN[birthInfo.fp.year.branch]}), your Destiny Palace is <strong>Palace ${birthInfo.destinyPalace}</strong> (${PALACE_DIR[birthInfo.destinyPalace]}, ${PALACE_TRIGRAM[birthInfo.destinyPalace]}). This palace in the QMDJ grid is highlighted with a golden border. It represents your innate connection to that direction and trigram energy. When this palace has auspicious elements, it suggests natural advantages; when inauspicious, it points to areas needing conscious effort. Cross-reference the Destiny Palace's Gate, Star, and Deity for personalized insights.</p>`;
+    }
+  }
+
+  if (showLR && lr) {
+    html += `<p><strong class="text-gold">Month General (月将):</strong> ${BRANCHES_CN[lr.monthGeneralIdx]} (${BRANCHES_EN[lr.monthGeneralIdx]}). This is the ruling energy of the current month based on the solar term. It determines how the Heaven Plate rotates above the Earth Plate, setting the entire chart's foundation.</p>`;
+
+    html += `<p><strong class="text-accentLight">Four Lessons (四课):</strong> These are derived from the Day Stem and Day Branch. The 1st and 2nd lessons relate to the querent (self), while the 3rd and 4th relate to the matter or other party. Each lesson shows an "upper" branch over a "lower" branch — what's visible (upper) over what's foundational (lower).</p>`;
+
+    html += `<p><strong class="text-gold">Three Transmissions (三传):</strong> The heart of the reading. The <strong>Initial Transmission (初传)</strong> at ${BRANCHES_CN[lr.transmissions[0].branch]} shows the beginning or root cause. The <strong>Middle Transmission (中传)</strong> at ${BRANCHES_CN[lr.transmissions[1].branch]} shows the development or process. The <strong>Final Transmission (末传)</strong> at ${BRANCHES_CN[lr.transmissions[2].branch]} shows the outcome or result. Method: "${lr.method}".</p>`;
+
+    html += `<p><strong class="text-slate-300">Interpreting the Transmissions:</strong> Read them as a story arc — Initial = "how it starts," Middle = "what happens along the way," Final = "where it ends up." Consider the Five Element relationships between them: do they generate (生), overcome (克), or support each other?</p>`;
+  }
+
+  if (isDual && qmdj && lr) {
+    html += `<p><strong class="text-accentLight">Dual Mode Cross-Reference:</strong> When both QMDJ and Liu Ren are calculated for the same moment, you can cross-reference them for deeper insight. The Liu Ren Initial Transmission (初传: ${BRANCHES_CN[lr.transmissions[0].branch]}) often resonates with the QMDJ palace where the Hour Stem resides (Palace ${qmdj.hourStemPalace}, ${PALACE_DIR[qmdj.hourStemPalace]}). Compare the Gate quality at that palace with the element relationship in the Liu Ren transmissions — when both point in the same direction (favorable or unfavorable), the reading is particularly strong.</p>`;
+  }
+
+  el.innerHTML = html;
+}
+
+// ============================================================
+// MAIN CALCULATE
+// ============================================================
+function calculate() {
+  const dtInput = document.getElementById('inputDatetime').value;
+  if (!dtInput) {
+    showToast('Please select a date and time first.', 'error');
+    return;
+  }
+
+  const civilDate = new Date(dtInput);
+  const utcOffset = parseFloat(document.getElementById('inputUTCOffset').value) || 8;
+  const longitude = parseFloat(document.getElementById('inputLongitude').value) || 103.8;
+
+  const tst = getTrueSolarTime(civilDate, utcOffset, longitude);
+  const adjustedDate = tst.trueSolarDate;
+
+  const fp = getFourPillars(adjustedDate);
+
+  const isDual = document.getElementById('dualMode').checked;
+  const effectiveMethod = currentMethod;
+
+  let qmdj = null, lr = null;
+
+  if (effectiveMethod === 'qmdj' || isDual) {
+    qmdj = calculateQMDJ(fp);
+  }
+  if (effectiveMethod === 'liuren' || isDual) {
+    lr = calculateLiuRen(fp);
+  }
+
+  const birthInfo = getBirthPillars();
+  const destinyPalace = birthInfo ? birthInfo.destinyPalace : null;
+
+  lastResult = {
+    fp, qmdj, lr, method: effectiveMethod, isDual,
+    category: document.getElementById('inputCategory').value,
+    question: document.getElementById('inputQuestion').value,
+    tst, civilDate, utcOffset, longitude,
+    birthInfo, destinyPalace
+  };
+
+  document.getElementById('resultsArea').classList.remove('hidden');
+
+  renderTSTBar(tst);
+  renderFourPillars(fp);
+
+  document.querySelectorAll('#birthPillarSection .destiny-info-bar').forEach(el => el.remove());
+  renderBirthPillars(birthInfo);
+
+  if (effectiveMethod === 'qmdj' || isDual) {
+    document.getElementById('qmdjView').classList.remove('hidden');
+    renderQMDJ(qmdj, fp, destinyPalace);
+  } else {
+    document.getElementById('qmdjView').classList.add('hidden');
+  }
+
+  if (effectiveMethod === 'liuren' && !isDual) {
+    document.getElementById('liurenView').classList.remove('hidden');
+    renderLiuRen(lr);
+  } else if (isDual) {
+    document.getElementById('liurenView').classList.add('hidden');
+  } else {
+    document.getElementById('liurenView').classList.add('hidden');
+  }
+
+  const dualSection = document.getElementById('dualLiuRenSection');
+  if (isDual && lr) {
+    dualSection.classList.remove('hidden');
+    renderLiuRenContent(lr, 'dualLiurenContent');
+  } else {
+    dualSection.classList.add('hidden');
+  }
+
+  renderExplanation(fp, qmdj, lr, birthInfo, isDual);
+
+  const remediesSection = document.getElementById('remediesSection');
+  if (qmdj) {
+    remediesSection.classList.remove('hidden');
+    renderFacingDirections(qmdj, birthInfo, destinyPalace);
+  } else {
+    remediesSection.classList.add('hidden');
+  }
+
+  document.getElementById('resultsArea').scrollIntoView({behavior:'smooth', block:'start'});
+  if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+// ============================================================
+// AI SHARE
+// ============================================================
+function shareWithAI() {
+  if (!lastResult) {
+    showToast('Please calculate a chart first.', 'error');
+    return;
+  }
+
+  const {fp, qmdj, lr, method, isDual, category, question, tst, utcOffset, longitude, birthInfo} = lastResult;
+  let md = '';
+
+  md += `# QMDJ & Liu Ren Divination Chart\n\n`;
+
+  md += `**Date/Time (Civil):** ${tst.civilDate.toLocaleString()}\n`;
+  md += `**True Solar Time (真太阳时):** ${tst.trueSolarDate.toLocaleString()}\n`;
+  md += `**Location:** Longitude ${longitude}°E, UTC${utcOffset >= 0 ? '+' : ''}${utcOffset}\n`;
+  md += `**Time Correction:** ${tst.timeCorrectionMin >= 0 ? '+' : ''}${tst.timeCorrectionMin} min (Lng ${tst.lngCorrectionMin >= 0 ? '+' : ''}${tst.lngCorrectionMin} + Eq ${tst.eqOfTimeMin >= 0 ? '+' : ''}${tst.eqOfTimeMin})\n`;
+  md += `**Method:** ${method === 'qmdj' ? 'Qi Men Dun Jia (奇门遁甲)' : 'Da Liu Ren (大六壬)'}${isDual ? ' + Dual Mode (Liu Ren included)' : ''}\n`;
+  md += `**Category:** ${category}\n`;
+  if (question) md += `**Question:** ${question}\n`;
+
+  if (birthInfo) {
+    md += `\n## Querent Birth Info\n\n`;
+    md += `**Birth Date:** ${birthInfo.birthDateStr}\n`;
+    md += `**Gender:** ${birthInfo.gender ? (birthInfo.gender === 'male' ? 'Male (阳)' : 'Female (阴)') : 'Not specified'}\n`;
+    md += `**Birth Day Stem (日干):** ${birthInfo.fp.day.stemCN} (${birthInfo.fp.day.stemEN}) — ${birthInfo.fp.day.element}\n`;
+    md += `**Birth Year Branch (年支):** ${birthInfo.fp.year.branchCN} (${birthInfo.fp.year.branchEN})\n`;
+    md += `**Destiny Palace (本命宫):** Palace ${birthInfo.destinyPalace} (${PALACE_DIR[birthInfo.destinyPalace]}, ${PALACE_TRIGRAM[birthInfo.destinyPalace]})\n`;
+    md += `**Birth Four Pillars:** ${birthInfo.fp.year.stemCN}${birthInfo.fp.year.branchCN} | ${birthInfo.fp.month.stemCN}${birthInfo.fp.month.branchCN} | ${birthInfo.fp.day.stemCN}${birthInfo.fp.day.branchCN} | ${birthInfo.fp.hour.stemCN}${birthInfo.fp.hour.branchCN}\n`;
+  }
+
+  md += `\n---\n\n`;
+
+  md += `## Four Pillars (八字) — based on True Solar Time\n\n`;
+  md += `| Pillar | Stem | Branch | Element |\n`;
+  md += `|--------|------|--------|----------|\n`;
+  md += `| Year   | ${fp.year.stemCN} (${fp.year.stemEN}) | ${fp.year.branchCN} (${fp.year.branchEN}) | ${fp.year.element} |\n`;
+  md += `| Month  | ${fp.month.stemCN} (${fp.month.stemEN}) | ${fp.month.branchCN} (${fp.month.branchEN}) | ${fp.month.element} |\n`;
+  md += `| Day    | ${fp.day.stemCN} (${fp.day.stemEN}) | ${fp.day.branchCN} (${fp.day.branchEN}) | ${fp.day.element} |\n`;
+  md += `| Hour   | ${fp.hour.stemCN} (${fp.hour.stemEN}) | ${fp.hour.branchCN} (${fp.hour.branchEN}) | ${fp.hour.element} |\n\n`;
+  md += `**Xun Kong (Void):** Day ${fp.dayXunKong.join(', ')} | Hour ${fp.hourXunKong.join(', ')}\n`;
+  md += `**Solar Term:** ${fp.solarTerm} | **${fp.isYangDun ? 'Yang Dun (阳遁)' : 'Yin Dun (阴遁)'}**\n\n`;
+
+  if (qmdj) {
+    md += `## Qi Men Dun Jia Chart\n\n`;
+    md += `**${qmdj.isYangDun ? 'Yang Dun' : 'Yin Dun'} Ju ${qmdj.ju}** (${qmdj.yuanCN}, ${qmdj.solarTerm})\n\n`;
+    md += `### 9 Palaces\n\n`;
+    for (let row = 0; row < 3; row++) {
+      for (let col = 0; col < 3; col++) {
+        const p = PALACE_GRID[row][col];
+        const gate = qmdj.gates[p] !== undefined ? QMDJ_GATES[qmdj.gates[p]] : null;
+        const star = qmdj.stars[p] !== undefined ? QMDJ_STARS_CN[qmdj.stars[p]] : '-';
+        const deity = qmdj.deities[p] !== undefined ? QMDJ_DEITIES_CN[qmdj.deities[p]] : '-';
+        const isDestiny = birthInfo && p === birthInfo.destinyPalace;
+        const hStem = qmdj.heavenPlate[p] !== undefined ? STEMS_CN[qmdj.heavenPlate[p]] : '-';
+        md += `**Palace ${p} (${PALACE_DIR[p]}, ${PALACE_TRIGRAM[p]})${isDestiny ? ' ← DESTINY PALACE (本命宫)' : ''}:** `;
+        md += `Heaven: ${hStem}, Earth: ${STEMS_CN[qmdj.earthPlate[p]]}`;
+        if (gate) md += `, Gate: ${gate.cn}${gate.en} (${gate.type})`;
+        md += `, Star: ${star}, Deity: ${deity}`;
+        md += `\n`;
+      }
+    }
+  }
+
+  if (lr) {
+    md += `\n## Da Liu Ren Chart\n\n`;
+    md += `**Month General (月将):** ${BRANCHES_CN[lr.monthGeneralIdx]} (${BRANCHES_EN[lr.monthGeneralIdx]})\n`;
+    md += `**Method:** ${lr.method}\n\n`;
+
+    md += `### Four Lessons (四课)\n\n`;
+    lr.lessons.forEach((l) => {
+      md += `- ${l.label} Lesson: ${BRANCHES_CN[l.upper]} (${BRANCHES_EN[l.upper]}) over ${BRANCHES_CN[l.lower]} (${BRANCHES_EN[l.lower]})\n`;
+    });
+
+    md += `\n### Three Transmissions (三传)\n\n`;
+    lr.transmissions.forEach(t => {
+      md += `- **${t.cnLabel} (${t.label}):** ${BRANCHES_CN[t.branch]} (${BRANCHES_EN[t.branch]})\n`;
+    });
+  }
+
+  md += `\n---\n\n`;
+  md += `Please analyze this ${qmdj ? 'Qi Men Dun Jia' : ''}${isDual ? ' + ' : ''}${lr ? 'Da Liu Ren' : ''} chart`;
+  if (question) md += ` in relation to my question: "${question}"`;
+  md += `. The category is "${category}". `;
+
+  if (birthInfo) {
+    md += `\n\n**Important:** Cross-reference the QMDJ palaces with the querent's Birth Day Stem (${birthInfo.fp.day.stemCN}/${birthInfo.fp.day.stemEN}) and Destiny Palace (Palace ${birthInfo.destinyPalace}, ${PALACE_TRIGRAM[birthInfo.destinyPalace]}). `;
+  }
+  if (isDual && lr) {
+    md += `Also cross-reference the QMDJ Hour Stem palace (Palace ${qmdj ? qmdj.hourStemPalace : '?'}) with the Liu Ren Initial Transmission (${BRANCHES_CN[lr.transmissions[0].branch]}/${BRANCHES_EN[lr.transmissions[0].branch]}). `;
+  }
+
+  if (qmdj) {
+    md += `\n\n**Facing Directions Reference:**\n`;
+    for (const ag of AUSPICIOUS_GATES) {
+      for (let p = 1; p <= 9; p++) {
+        if (qmdj.gates[p] === ag.idx) {
+          md += `- ${ag.cn} (${ag.en}): Face **${PALACE_DIR[p]}** (Palace ${p}, ${PALACE_TRIGRAM[p]}) — ${ag.desc}\n`;
+          break;
+        }
+      }
+    }
+    if (birthInfo) {
+      const dp = birthInfo.destinyPalace;
+      md += `- Destiny Palace Personal Direction: Face **${PALACE_DIR[dp]}** (Palace ${dp}, ${PALACE_TRIGRAM[dp]})\n`;
+    }
+  }
+
+  md += `\n\n**CRITICAL INSTRUCTION FOR AI:** Output a concise, layman-friendly "Executive Summary" using this exact template:\n\n`;
+  md += `## Executive Summary\n`;
+  md += `**The Bottom Line:** [1-2 sentence maximum concise overview of current situation]\n\n`;
+
+  md += `## 1. Your Personal Energy (Destiny Palace)\n`;
+  md += `* **[Theme]:** [1 sentence explanation]\n`;
+  md += `* **What it means:** [1 sentence practical takeaway]\n\n`;
+
+  md += `## 2. Environment & Situation\n`;
+  md += `* **[Theme]:** [1 sentence explanation on Gates / Void]\n`;
+  md += `* **What it means:** [1 sentence practical takeaway]\n\n`;
+
+  md += `## 3. The Path Forward\n`;
+  md += `* **[Theme]:** [1 sentence explanation of Liu Ren / Flow]\n`;
+  md += `* **What it means:** [1 sentence practical takeaway]\n\n`;
+
+  md += `## 🧭 Optimal Facing Directions\n`;
+  md += `* 🟢 **Primary Direction (Auspicious Gate):** Face [Direction of Life/Open Gate] when making key business calls, working, or negotiating.\n`;
+  md += `* 🧘 **Personal Support Direction:** Face [Destiny Palace Direction] for meditation, introspection, or deep planning.\n\n`;
+
+  md += `## 💡 Quick Action Plan\n`;
+  md += `* [Emoji] **[Action 1]:** [1 short sentence]\n`;
+  md += `* [Emoji] **[Action 2]:** [1 short sentence]\n`;
+  md += `* [Emoji] **[Action 3]:** [1 short sentence]\n\n`;
+  md += `Keep the tone modern, direct, and practical. Ignore minor chart details.`;
+
+  navigator.clipboard.writeText(md).then(() => {
+    showToast('Copied! Ready to paste into Gemini or any AI chatbot.', 'success');
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = md;
+    ta.style.cssText = 'position:fixed;top:-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Copied! Ready to paste into Gemini or any AI chatbot.', 'success');
+  });
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  setNowSilent();
+
+  if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+  }
+}
+
+function setNowSilent() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+  const local = new Date(now.getTime() - offset * 60000);
+  document.getElementById('inputDatetime').value = local.toISOString().slice(0, 16);
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
